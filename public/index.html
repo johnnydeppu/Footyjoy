@@ -69,6 +69,21 @@
         const [sources,setSources]=useState([]);
         React.useEffect(() => { loadDictionaries(); }, []);
 
+        async function quickScan(){
+  try{
+    if(!players.length) await loadDictionaries(); // 未ロードなら辞書を先に
+    const r = await fetch('/api/scan-epl?limit=32');
+    if(!r.ok) throw new Error('scan failed');
+    const data = await r.json();
+    // URLで重複排除しつつ先頭に追加
+    setSources(s => {
+      const seen = new Set(s.map(x=>x.url));
+      const add = (data.sources||[]).filter(x=>!seen.has(x.url));
+      return [...add, ...s];
+    });
+  }catch(e){ alert('Quick Scan失敗: ' + e.message); }
+}
+
         async function loadDictionaries(){
           const [kw,pl]=await Promise.all([
             fetch("/config/keywords.json").then(r=>r.json()),
@@ -121,6 +136,8 @@
                 {tab==="intel" && (
                   <div className="ml-3 flex items-center gap-2 text-sm">
                     <button onClick={loadDictionaries} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">Load EPL base</button>
+                    <button onClick={quickScan} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">Quick Scan EPL</button>
+
                     <span className="text-slate-500">players: {players.length||0}</span>
                   </div>
                 )}
