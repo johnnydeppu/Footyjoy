@@ -1,0 +1,12 @@
+{
+"injury": [
+"injury", "injured", "knock", "hamstring", "ankle", "knee", "groin", "doubtful", "ruled out",
+"負傷", "欠場", "離脱"
+],
+"returning": [
+"back in training", "returned to training", "fit again", "復帰", "復帰間近"
+],
+"form": [
+"goal", "scored", "brace", "hat-trick", "assist", "MOTM", "clean sheet", "躍動", "好調", "決勝点"
+]
+}
