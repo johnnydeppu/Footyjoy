@@ -67,6 +67,7 @@
         const [keywords,setKeywords]=useState({injury:[],returning:[],form:[]});
         const [roster,setRoster]=useState([]);
         const [sources,setSources]=useState([]);
+        React.useEffect(() => { loadDictionaries(); }, []);
 
         async function loadDictionaries(){
           const [kw,pl]=await Promise.all([
