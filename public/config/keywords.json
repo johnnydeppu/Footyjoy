@@ -1,5 +1,17 @@
 {
-  "injury": ["injury", "injured", "knock", "hamstring", "ankle", "knee", "groin", "doubtful", "ruled out", "負傷", "欠場", "離脱"],
-  "returning": ["back in training", "returned to training", "fit again", "復帰", "復帰間近"],
-  "form": ["goal", "scored", "brace", "hat-trick", "assist", "MOTM", "clean sheet", "躍動", "好調", "決勝点"]
+  "injury": [
+    "injury","injured","knock","hamstring","ankle","knee","groin","calf","thigh","back","shoulder",
+    "illness","virus","concussion","fracture","scan","set to miss","ruled out","out for","sideline","doubtful",
+    "late fitness test","fitness test","負傷","欠場","離脱","別メニュー"
+  ],
+  "returning": [
+    "back in training","returned to training","fit again","in contention","available","makes the squad",
+    "back from injury","recovered","復帰","復帰間近","合流","戦列復帰"
+  ],
+  "form": [
+    "goal","goals","scored","brace","hat-trick","equaliser","winner",
+    "assist","assisted","created","key pass","chance created",
+    "MOTM","man of the match","clean sheet","on fire","in form",
+    "先制","決勝点","得点","アシスト","躍動","好調","無失点"
+  ]
 }
