@@ -1,6 +1,38 @@
 [
   {"id":"saka","teamId":"ARS","name_en":"Bukayo Saka","name_local":"ブカヨ・サカ","alt":["Saka","サカ","Bukayo"]},
   {"id":"odegaard","teamId":"ARS","name_en":"Martin Odegaard","name_local":"ウーデゴール","alt":["Ødegaard","Odegaard","Martin"]},
+  {"id":"rice","teamId":"ARS","name_en":"Declan Rice","name_local":"デクラン・ライス","alt":["Rice","デクラン"]},
+  {"id":"martinelli","teamId":"ARS","name_en":"Gabriel Martinelli","name_local":"ガブリエウ・マルティネッリ","alt":["Martinelli","ガブリエル・マルティネッリ"]},
+  {"id":"saliba","teamId":"ARS","name_en":"William Saliba","name_local":"ウィリアム・サリバ","alt":["Saliba","サリバ"]},
+  {"id":"jesus","teamId":"ARS","name_en":"Gabriel Jesus","name_local":"ガブリエウ・ジェズス","alt":["Jesus","ジェズス","Gabriel Jesus"]},
+
   {"id":"haaland","teamId":"MCI","name_en":"Erling Haaland","name_local":"アーリング・ハーランド","alt":["Haaland","ハーランド","Erling"]},
-  {"id":"kdb","teamId":"MCI","name_en":"Kevin De Bruyne","name_local":"デ・ブライネ","alt":["De Bruyne","KDB","デブライネ"]}
+  {"id":"kdb","teamId":"MCI","name_en":"Kevin De Bruyne","name_local":"デ・ブライネ","alt":["De Bruyne","KDB","デブライネ"]},
+  {"id":"foden","teamId":"MCI","name_en":"Phil Foden","name_local":"フィル・フォーデン","alt":["Foden","フォーデン","Phil"]},
+  {"id":"rodri","teamId":"MCI","name_en":"Rodri","name_local":"ロドリ","alt":["Rodri","ロドリゴ・エルナンデス"]},
+  {"id":"grealish","teamId":"MCI","name_en":"Jack Grealish","name_local":"ジャック・グリーリッシュ","alt":["Grealish","グリーリッシュ"]},
+  {"id":"bernardo","teamId":"MCI","name_en":"Bernardo Silva","name_local":"ベルナルド・シウバ","alt":["Bernardo","Silva","ベルナルド"]},
+
+  {"id":"salah","teamId":"LIV","name_en":"Mohamed Salah","name_local":"モハメド・サラー","alt":["Salah","サラー","Mo Salah"]},
+  {"id":"nunez","teamId":"LIV","name_en":"Darwin Nunez","name_local":"ダルウィン・ヌニェス","alt":["Núñez","Nunez","ヌニェス","Darwin"]},
+  {"id":"taa","teamId":"LIV","name_en":"Trent Alexander-Arnold","name_local":"トレント・アレクサンダー＝アーノルド","alt":["Trent","Alexander-Arnold","TAA"]},
+  {"id":"vvd","teamId":"LIV","name_en":"Virgil van Dijk","name_local":"フィルジル・ファン・ダイク","alt":["Van Dijk","VvD","ファンダイク"]},
+  {"id":"diaz","teamId":"LIV","name_en":"Luis Diaz","name_local":"ルイス・ディアス","alt":["Díaz","Diaz","ディアス"]},
+
+  {"id":"son","teamId":"TOT","name_en":"Heung-min Son","name_local":"ソン・フンミン","alt":["Son","Heung-min","ソン"]},
+  {"id":"maddison","teamId":"TOT","name_en":"James Maddison","name_local":"ジェームズ・マディソン","alt":["Maddison","マディソン"]},
+  {"id":"richarlison","teamId":"TOT","name_en":"Richarlison","name_local":"リシャルリソン","alt":["Richarlison","リシャル"]},
+  {"id":"romero","teamId":"TOT","name_en":"Cristian Romero","name_local":"クリスティアン・ロメロ","alt":["Romero","ロメロ"]},
+
+  {"id":"bruno","teamId":"MUN","name_en":"Bruno Fernandes","name_local":"ブルーノ・フェルナンデス","alt":["Bruno","Fernandes","B.Fernandes"]},
+  {"id":"rashford","teamId":"MUN","name_en":"Marcus Rashford","name_local":"マーカス・ラッシュフォード","alt":["Rashford","ラッシュフォード"]},
+  {"id":"hojlund","teamId":"MUN","name_en":"Rasmus Hojlund","name_local":"ラスムス・ホイルンド","alt":["Højlund","Hojlund","ホイルンド"]},
+  {"id":"casemiro","teamId":"MUN","name_en":"Casemiro","name_local":"カゼミーロ","alt":["Case","カゼミロ"]},
+  {"id":"martinez","teamId":"MUN","name_en":"Lisandro Martinez","name_local":"リサンドロ・マルティネス","alt":["Martínez","Martinez","リサンドロ"]},
+
+  {"id":"enzo","teamId":"CHE","name_en":"Enzo Fernandez","name_local":"エンソ・フェルナンデス","alt":["Fernández","Fernandez","Enzo"]},
+  {"id":"palmer","teamId":"CHE","name_en":"Cole Palmer","name_local":"コール・パーマー","alt":["Palmer","パーマー"]},
+  {"id":"sterling","teamId":"CHE","name_en":"Raheem Sterling","name_local":"ラヒーム・スターリング","alt":["Sterling","スターリング"]},
+  {"id":"reece","teamId":"CHE","name_en":"Reece James","name_local":"リース・ジェームズ","alt":["Reece","James","リース"]},
+  {"id":"nkunku","teamId":"CHE","name_en":"Christopher Nkunku","name_local":"クリストファー・エンクンク","alt":["Nkunku","エンクンク"]}
 ]
