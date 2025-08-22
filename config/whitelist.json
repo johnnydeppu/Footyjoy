@@ -1,0 +1,7 @@
+{
+"premierleague.com": {"trust":"official", "rss": ["https://www.premierleague.com/news"]},
+"bbc.com": {"trust":"high", "rss": ["https://feeds.bbci.co.uk/sport/football/rss.xml"]},
+"skysports.com": {"trust":"high", "rss": ["https://www.skysports.com/rss/12040"]},
+"arsenal.com": {"trust":"official", "rss": ["https://www.arsenal.com/rss"]},
+"mancity.com": {"trust":"official", "rss": ["https://www.mancity.com/news.rss"]}
+}
