@@ -17,16 +17,18 @@
       const cn=(...c)=>c.filter(Boolean).join(" ");
       const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 
-      // ===== 抽出ロジック =====
+      // ========== 抽出ロジック ==========
       function splitSentences(text){ if(!text) return []; return String(text).replace(/\s+/g," ").split(/(?<=[\.!?。！？])\s+/).map(s=>s.trim()).filter(Boolean); }
       function normalizeStr(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf\s-]/g,""); }
-      function buildPlayerIndex(players){ const idx=new Map(); for(const p of players||[]){ const names=[p.name_en,p.name_local,...(p.alt||[])].filter(Boolean); for(const n of names) idx.set(normalizeStr(n),p);} return idx; }
+      function buildPlayerIndex(players){ const idx=new Map(); for(const p of players||[]){ const names=[p.name_en,p.name_local,...(p.alt||[])].filter(Boolean); for(const n of names){ idx.set(normalizeStr(n), p); } } return idx; }
       function matchHighlights(text, players, keywords){
         const sentences=splitSentences(text).slice(0,400);
         const idx=buildPlayerIndex(players);
-        const K={ injury:new Set((keywords?.injury||[]).map(normalizeStr)),
-                  returning:new Set((keywords?.returning||[]).map(normalizeStr)),
-                  form:new Set((keywords?.form||[]).map(normalizeStr)) };
+        const K={
+          injury:    new Set((keywords?.injury    || []).map(normalizeStr)),
+          returning: new Set((keywords?.returning || []).map(normalizeStr)),
+          form:      new Set((keywords?.form      || []).map(normalizeStr)),
+        };
         const out=[];
         for(const raw of sentences){
           const s=normalizeStr(raw);
@@ -36,22 +38,25 @@
           if(!inj && !ret && !frm) continue;
           for(const [key,p] of idx.entries()){
             if(key && s.includes(key)){
-              out.push({ player:p.name_en||key, kind:inj?"injury":ret?"returning":"form", sentence:raw.trim() });
+              out.push({ player:p.name_en||key, kind: inj? "injury" : ret? "returning" : "form", sentence: raw.trim() });
             }
           }
         }
+        // 重複除去
         const ded=[]; for(const h of out){ if(!ded.some(x=>x.player===h.player&&x.kind===h.kind&&x.sentence===h.sentence)) ded.push(h); }
         return ded.slice(0,50);
       }
 
-      // ===== 日本語ヘルパ =====
+      // ========== 日本語表示 ==========
       function jaKind(k){ return k==="injury"?"負傷":k==="returning"?"復帰":"好調"; }
+      function chipClass(k){
+        return k==="injury"?"bg-red-50 border-red-400 text-red-700":
+               k==="returning"?"bg-amber-50 border-amber-400 text-amber-700":
+               "bg-green-50 border-green-400 text-green-700";
+      }
       function fmtJP(ts){ try{ return new Date(ts).toLocaleString("ja-JP",{hour12:false}); }catch{ return ""; } }
-      const trustColor = (k)=> k==="injury"?"bg-red-50 border-red-400 text-red-700"
-                               :k==="returning"?"bg-amber-50 border-amber-400 text-amber-700"
-                               :"bg-green-50 border-green-400 text-green-700";
 
-      // ===== 翻訳（常時ON・キャッシュ付き）=====
+      // ========== 翻訳（常時ON・ローカルキャッシュ） ==========
       const tKey = (s)=> btoa(unescape(encodeURIComponent(String(s)))).slice(0,120);
       function useTranslator(){
         const [cache,setCache]=useState(()=>{ try{ return JSON.parse(localStorage.getItem("fj.tcache")||"{}"); }catch{return{}}; });
@@ -60,37 +65,40 @@
           const k=tKey(s); if(cache[k]) return cache[k];
           const r=await fetch("/api/translate?q="+encodeURIComponent(s));
           const data=await r.json(); const text=data?.text||"";
-          setCache(c=>({...c, [k]:text})); return text;
+          setCache(c=>({...c,[k]:text})); return text;
         }
         const get=(s)=>cache[tKey(s)];
         return {trOnce, get};
       }
 
+      // ========== チーム名（プルダウン表示用） ==========
+      const TEAM_LABELS = { ARS:"Arsenal", MCI:"Man City", LIV:"Liverpool", TOT:"Tottenham", MUN:"Man United", CHE:"Chelsea" };
+
       function App(){
         const [tab,setTab]=useState("intel");
 
-        // 状態
+        // データ
         const [players,setPlayers]=useState([]);
         const [keywords,setKeywords]=useState({injury:[],returning:[],form:[]});
-        const [roster,setRoster]=useState([]);
+        const [roster,setRoster]=useState([]);     // ウォッチ選手（英語表記のまま）
         const [sources,setSources]=useState([]);
 
         const {trOnce, get:tget}=useTranslator();
 
-        async function loadDictionaries(){
+        // 起動時に辞書ロード
+        useEffect(()=>{ (async ()=>{
           const [kw,pl]=await Promise.all([
             fetch("/config/keywords.json").then(r=>r.json()),
             fetch("/config/players.json").then(r=>r.json()),
           ]);
           setKeywords(kw); setPlayers(pl);
-        }
+        })(); },[]);
 
-        // 初期表示時に自動ロード
-        useEffect(()=>{ loadDictionaries(); },[]);
-
+        // ウォッチ管理
         function addWatch(name){ const n=String(name||"").trim(); if(n && !roster.includes(n)) setRoster(r=>[...r,n]); }
         function removeWatch(n){ setRoster(r=>r.filter(x=>x!==n)); }
 
+        // 取得
         async function addSource(url){
           const u = normalizeUrl(url);
           try{
@@ -102,12 +110,11 @@
             setSources(s=>[{ id:uid(), url:u, title:data.title||u, desc:data.desc||"", fetchedAt:Date.now(), highlights }, ...s]);
           }catch(e){ alert("取得失敗: "+e.message); }
         }
-
         async function quickScan(){
           try{
-            const r = await fetch("/api/scan-epl?limit=32");
+            const r=await fetch("/api/scan-epl?limit=32");
             if(!r.ok) throw new Error("スキャンに失敗しました");
-            const data = await r.json();
+            const data=await r.json();
             setSources(s=>{
               const seen=new Set(s.map(x=>x.url));
               const add=(data.sources||[]).filter(x=>!seen.has(x.url));
@@ -116,6 +123,7 @@
           }catch(e){ alert(e.message); }
         }
 
+        // インサイト：ウォッチ選手でフィルタ
         const insights = useMemo(()=>{
           const arr=[];
           for(const s of sources){
@@ -128,7 +136,7 @@
           return arr.sort((a,b)=>b.ts-a.ts);
         },[sources,roster]);
 
-        // 日本語訳の先読み（上位20件）
+        // 翻訳先読み（上位20件）
         useEffect(()=>{
           const uniq = Array.from(new Set(insights.map(i=>i.sentence))).slice(0,20);
           uniq.forEach(s=>{ if(!tget(s)) trOnce(s); });
@@ -136,7 +144,22 @@
 
         const watchPlayers=useMemo(()=> roster.map(n=>({name:n, facts: insights.filter(i=>eqName(i.player,n)).slice(0,3)})), [roster,insights]);
 
-        // Matches（簡易メモ）
+        // ===== 試合プリセット =====
+        const [homeTeam,setHomeTeam]=useState("");
+        const [awayTeam,setAwayTeam]=useState("");
+        const teamOptions = useMemo(()=> Array.from(new Set(players.map(p=>p.teamId))).sort(), [players]);
+        const teamName = (id)=> TEAM_LABELS[id] || id;
+
+        function startMatchPreset(){
+          const ids=[homeTeam,awayTeam].filter(Boolean);
+          if(!ids.length) return alert("チームを選んでください");
+          const names = players.filter(p=>ids.includes(p.teamId)).map(p=>p.name_en);
+          setRoster(Array.from(new Set(names)));
+          quickScan();
+        }
+        function clearMatchPreset(){ setHomeTeam(""); setAwayTeam(""); setRoster([]); }
+
+        // ===== Matches（簡易メモ） =====
         const [matches,setMatches]=useState([]);
         function newMatch(){ setMatches(m=>[{id:uid(), when:new Date().toISOString(), memo:""}, ...m]); }
 
@@ -151,7 +174,6 @@
                 </nav>
                 {tab==="intel" && (
                   <div className="ml-3 flex items-center gap-2 text-sm">
-                    <button onClick={loadDictionaries} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">辞書を読み込む</button>
                     <button onClick={quickScan} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">クイックスキャン（EPL）</button>
                     <span className="text-slate-500">選手数: {players.length||0}</span>
                   </div>
@@ -164,12 +186,38 @@
 
             {tab==="intel" ? (
               <main className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 試合プリセット */}
+                <section className="lg:col-span-3">
+                  <div className="rounded-3xl bg-white p-4 shadow-sm">
+                    <h2 className="text-lg font-semibold">試合プリセット</h2>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <select className="rounded-xl border px-3 py-1.5" value={homeTeam} onChange={e=>setHomeTeam(e.target.value)}>
+                        <option value="">ホームを選択</option>
+                        {teamOptions.map(id => <option key={id} value={id}>{teamName(id)}</option>)}
+                      </select>
+                      <select className="rounded-xl border px-3 py-1.5" value={awayTeam} onChange={e=>setAwayTeam(e.target.value)}>
+                        <option value="">アウェイを選択</option>
+                        {teamOptions.map(id => <option key={id} value={id}>{teamName(id)}</option>)}
+                      </select>
+                      <div className="flex gap-2">
+                        <button onClick={startMatchPreset} className="flex-1 rounded-xl border px-3 py-1.5 hover:bg-slate-100">この試合を開始</button>
+                        <button onClick={clearMatchPreset} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">解除</button>
+                      </div>
+                    </div>
+                    {!!roster.length && (
+                      <div className="mt-2 text-xs text-slate-600">
+                        フィルタ中の選手数: <b>{roster.length}</b>{homeTeam||awayTeam ? `（${homeTeam && teamName(homeTeam)}${awayTeam? " vs "+teamName(awayTeam):""}）` : ""}
+                      </div>
+                    )}
+                  </div>
+                </section>
+
                 {/* 左：ウォッチ選手 */}
                 <section className="lg:col-span-1">
                   <div className="rounded-3xl bg-white p-4 shadow-sm">
                     <h2 className="text-lg font-semibold">ウォッチ選手</h2>
                     <div className="mt-3 flex gap-2">
-                      <input id="watchName" placeholder="選手名（例：サカ / ハーランド）" className="flex-1 rounded-xl border px-3 py-1.5"
+                      <input id="watchName" placeholder="選手名（例：Saka / Haaland）" className="flex-1 rounded-xl border px-3 py-1.5"
                         onKeyDown={e=>{ if(e.key==='Enter'){ const n=e.currentTarget.value; addWatch(n); e.currentTarget.value=''; }}} />
                       <button onClick={()=>{ const el=document.getElementById('watchName'); if(el?.value){ addWatch(el.value); el.value=''; } }}
                               className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">追加</button>
@@ -184,12 +232,11 @@
                           <div className="mt-2 text-xs text-slate-600 space-y-1">
                             {p.facts.length
                               ? p.facts.map((f,i)=>(
-                                  <div key={i} className="line-clamp-2">
-                                    • {f.sentence}
-                                    <a href={f.url} target="_blank" className="text-slate-500 underline ml-1">出典</a>
-                                    <div className="text-slate-700">🇯🇵 {tget(f.sentence) || "翻訳中…"}</div>
-                                  </div>
-                                ))
+                                <div key={i} className="line-clamp-2">
+                                  • {f.sentence} <a href={f.url} target="_blank" className="text-slate-500 underline ml-1">出典</a>
+                                  <div className="text-slate-700">🇯🇵 {tget(f.sentence) || "翻訳中…"}</div>
+                                </div>
+                              ))
                               : (<div className="text-slate-400">まだありません</div>)
                             }
                           </div>
@@ -200,7 +247,7 @@
                   </div>
                 </section>
 
-                {/* 右：ソースとインサイト */}
+                {/* 右：ソース */}
                 <section className="lg:col-span-2">
                   <div className="rounded-3xl bg-white p-4 shadow-sm">
                     <h2 className="text-lg font-semibold">情報ソース</h2>
@@ -224,7 +271,7 @@
                           {s.highlights?.length ? (
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {s.highlights.map((h,i)=>(
-                                <span key={i} className={cn("rounded-full px-2 py-0.5 text-xs border", trustColor(h.kind))}>
+                                <span key={i} className={cn("rounded-full px-2 py-0.5 text-xs border", chipClass(h.kind))}>
                                   {h.player}: {jaKind(h.kind)}
                                 </span>
                               ))}
@@ -236,13 +283,14 @@
                     </div>
                   </div>
 
+                  {/* インサイト */}
                   <div className="mt-4 rounded-3xl bg-white p-4 shadow-sm">
                     <h2 className="text-lg font-semibold">インサイト</h2>
                     <div className="mt-2 space-y-2">
                       {insights.map((i,idx)=>(
                         <div key={idx} className="rounded-xl border p-2 text-sm">
                           <div className="flex items-center justify-between">
-                            <div><b>{i.player}</b> — <span className={cn("px-1.5 py-0.5 rounded text-xs", trustColor(i.kind))}>{jaKind(i.kind)}</span></div>
+                            <div><b>{i.player}</b> — <span className={cn("px-1.5 py-0.5 rounded text-xs", chipClass(i.kind))}>{jaKind(i.kind)}</span></div>
                             <a href={i.url} target="_blank" className="text-xs text-slate-500 underline">出典</a>
                           </div>
                           <div className="mt-1">{i.sentence}</div>
@@ -284,6 +332,7 @@
         );
       }
 
+      // ========== ヘルパ ==========
       function eqName(a,b){ return normalize(a)===normalize(b); }
       function normalize(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,""); }
       function normalizeUrl(u){ try{ const url=new URL(u); return url.href; } catch{ if(/^https?:\/\//.test(u)) return u; return "https://"+u; } }
