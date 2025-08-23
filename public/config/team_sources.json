@@ -1,0 +1,102 @@
+{
+  "ARS": [
+    { "label": "Arsenal 公式", "url": "https://www.arsenal.com/news" },
+    { "label": "BBC Arsenal", "url": "https://www.bbc.com/sport/football/teams/arsenal" },
+    { "label": "Sky Sports Arsenal", "url": "https://www.skysports.com/arsenal-news" }
+  ],
+  "AVL": [
+    { "label": "Aston Villa 公式", "url": "https://www.avfc.co.uk/news" },
+    { "label": "BBC Aston Villa", "url": "https://www.bbc.com/sport/football/teams/aston-villa" },
+    { "label": "Sky Sports Aston Villa", "url": "https://www.skysports.com/aston-villa-news" }
+  ],
+  "BOU": [
+    { "label": "Bournemouth 公式", "url": "https://www.afcb.co.uk/news" },
+    { "label": "BBC Bournemouth", "url": "https://www.bbc.com/sport/football/teams/bournemouth" },
+    { "label": "Sky Sports Bournemouth", "url": "https://www.skysports.com/afc-bournemouth-news" }
+  ],
+  "BRE": [
+    { "label": "Brentford 公式", "url": "https://www.brentfordfc.com/en/news" },
+    { "label": "BBC Brentford", "url": "https://www.bbc.com/sport/football/teams/brentford" },
+    { "label": "Sky Sports Brentford", "url": "https://www.skysports.com/brentford-news" }
+  ],
+  "BHA": [
+    { "label": "Brighton 公式", "url": "https://www.brightonandhovealbion.com/news" },
+    { "label": "BBC Brighton", "url": "https://www.bbc.com/sport/football/teams/brighton-and-hove-albion" },
+    { "label": "Sky Sports Brighton", "url": "https://www.skysports.com/brighton-and-hove-albion-news" }
+  ],
+  "CHE": [
+    { "label": "Chelsea 公式", "url": "https://www.chelseafc.com/en/news" },
+    { "label": "BBC Chelsea", "url": "https://www.bbc.com/sport/football/teams/chelsea" },
+    { "label": "Sky Sports Chelsea", "url": "https://www.skysports.com/chelsea-news" }
+  ],
+  "CRY": [
+    { "label": "Crystal Palace 公式", "url": "https://www.cpfc.co.uk/news" },
+    { "label": "BBC Crystal Palace", "url": "https://www.bbc.com/sport/football/teams/crystal-palace" },
+    { "label": "Sky Sports Crystal Palace", "url": "https://www.skysports.com/crystal-palace-news" }
+  ],
+  "EVE": [
+    { "label": "Everton 公式", "url": "https://www.evertonfc.com/news" },
+    { "label": "BBC Everton", "url": "https://www.bbc.com/sport/football/teams/everton" },
+    { "label": "Sky Sports Everton", "url": "https://www.skysports.com/everton-news" }
+  ],
+  "FUL": [
+    { "label": "Fulham 公式", "url": "https://www.fulhamfc.com/news" },
+    { "label": "BBC Fulham", "url": "https://www.bbc.com/sport/football/teams/fulham" },
+    { "label": "Sky Sports Fulham", "url": "https://www.skysports.com/fulham-news" }
+  ],
+  "IPS": [
+    { "label": "Ipswich 公式", "url": "https://www.itfc.co.uk/news" },
+    { "label": "BBC Ipswich", "url": "https://www.bbc.com/sport/football/teams/ipswich-town" },
+    { "label": "Sky Sports Ipswich", "url": "https://www.skysports.com/ipswich-town-news" }
+  ],
+  "LEI": [
+    { "label": "Leicester 公式", "url": "https://www.lcfc.com/news" },
+    { "label": "BBC Leicester", "url": "https://www.bbc.com/sport/football/teams/leicester-city" },
+    { "label": "Sky Sports Leicester", "url": "https://www.skysports.com/leicester-city-news" }
+  ],
+  "LIV": [
+    { "label": "Liverpool 公式", "url": "https://www.liverpoolfc.com/news" },
+    { "label": "BBC Liverpool", "url": "https://www.bbc.com/sport/football/teams/liverpool" },
+    { "label": "Sky Sports Liverpool", "url": "https://www.skysports.com/liverpool-news" }
+  ],
+  "MCI": [
+    { "label": "Man City 公式", "url": "https://www.mancity.com/news" },
+    { "label": "BBC Man City", "url": "https://www.bbc.com/sport/football/teams/manchester-city" },
+    { "label": "Sky Sports Man City", "url": "https://www.skysports.com/manchester-city-news" }
+  ],
+  "MUN": [
+    { "label": "Man United 公式", "url": "https://www.manutd.com/en/news" },
+    { "label": "BBC Man United", "url": "https://www.bbc.com/sport/football/teams/manchester-united" },
+    { "label": "Sky Sports Man United", "url": "https://www.skysports.com/manchester-united-news" }
+  ],
+  "NEW": [
+    { "label": "Newcastle 公式", "url": "https://www.nufc.co.uk/news" },
+    { "label": "BBC Newcastle", "url": "https://www.bbc.com/sport/football/teams/newcastle-united" },
+    { "label": "Sky Sports Newcastle", "url": "https://www.skysports.com/newcastle-united-news" }
+  ],
+  "NOT": [
+    { "label": "Nottingham Forest 公式", "url": "https://www.nottinghamforest.co.uk/news" },
+    { "label": "BBC Nottingham Forest", "url": "https://www.bbc.com/sport/football/teams/nottingham-forest" },
+    { "label": "Sky Sports Nottingham Forest", "url": "https://www.skysports.com/nottingham-forest-news" }
+  ],
+  "SOU": [
+    { "label": "Southampton 公式", "url": "https://www.southamptonfc.com/news" },
+    { "label": "BBC Southampton", "url": "https://www.bbc.com/sport/football/teams/southampton" },
+    { "label": "Sky Sports Southampton", "url": "https://www.skysports.com/southampton-news" }
+  ],
+  "TOT": [
+    { "label": "Tottenham 公式", "url": "https://www.tottenhamhotspur.com/news/" },
+    { "label": "BBC Tottenham", "url": "https://www.bbc.com/sport/football/teams/tottenham-hotspur" },
+    { "label": "Sky Sports Tottenham", "url": "https://www.skysports.com/tottenham-hotspur-news" }
+  ],
+  "WHU": [
+    { "label": "West Ham 公式", "url": "https://www.whufc.com/news" },
+    { "label": "BBC West Ham", "url": "https://www.bbc.com/sport/football/teams/west-ham-united" },
+    { "label": "Sky Sports West Ham", "url": "https://www.skysports.com/west-ham-united-news" }
+  ],
+  "WOL": [
+    { "label": "Wolves 公式", "url": "https://www.wolves.co.uk/news" },
+    { "label": "BBC Wolves", "url": "https://www.bbc.com/sport/football/teams/wolverhampton-wanderers" },
+    { "label": "Sky Sports Wolves", "url": "https://www.skysports.com/wolverhampton-wanderers-news" }
+  ]
+}
