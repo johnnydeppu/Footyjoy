@@ -17,7 +17,7 @@
       const cn=(...c)=>c.filter(Boolean).join(" ");
       const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 
-      // ========= 抽出ロジック =========
+      // ===== 抽出ロジック =====
       function splitSentences(text){ if(!text) return []; return String(text).replace(/\s+/g," ").split(/(?<=[\.!?。！？])\s+/).map(s=>s.trim()).filter(Boolean); }
       function normalizeStr(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf\s-]/g,""); }
       function buildPlayerIndex(players){ const idx=new Map(); for(const p of players||[]){ const names=[p.name_en,p.name_local,...(p.alt||[])].filter(Boolean); for(const n of names){ idx.set(normalizeStr(n), p); } } return idx; }
@@ -46,7 +46,7 @@
         return ded.slice(0,50);
       }
 
-      // ========= 日本語表示 =========
+      // ===== 日本語表示ヘルパ =====
       function jaKind(k){ return k==="injury"?"負傷":k==="returning"?"復帰":"好調"; }
       function chipClass(k){
         return k==="injury"    ? "bg-red-50 border-red-400 text-red-700" :
@@ -55,7 +55,7 @@
       }
       function fmtJP(ts){ try{ return new Date(ts).toLocaleString("ja-JP",{hour12:false}); }catch{ return ""; } }
 
-      // ========= 翻訳（常時ON・ローカルキャッシュ） =========
+      // ===== 翻訳（常時ON・ローカルキャッシュ）=====
       const tKey = (s)=> btoa(unescape(encodeURIComponent(String(s)))).slice(0,120);
       function useTranslator(){
         const [cache,setCache]=useState(()=>{ try{ return JSON.parse(localStorage.getItem("fj.tcache")||"{}"); }catch{return{}}; });
@@ -70,7 +70,7 @@
         return {trOnce, get};
       }
 
-      // ========= チーム名（プルダウン表示用） =========
+      // ===== チーム名（プルダウン表示）=====
       const TEAM_LABELS = {
         ARS:"Arsenal", MCI:"Man City", LIV:"Liverpool", TOT:"Tottenham",
         MUN:"Man United", CHE:"Chelsea", NEW:"Newcastle", BHA:"Brighton",
@@ -79,13 +79,24 @@
         FUL:"Fulham", NOT:"Nottingham", BOU:"Bournemouth", IPS:"Ipswich"
       };
 
+      // ===== 簡易ソース信頼度（色分け）=====
+      function sourceBadge(u){
+        try{
+          const host=new URL(u).host;
+          if(/arsenal\.com|mancity\.com|liverpoolfc\.com|tottenhamhotspur\.com|manutd\.com|chelseafc\.com/.test(host)) return ["公式","bg-indigo-50 text-indigo-700 border-indigo-400"];
+          if(/bbc\.com/.test(host)) return ["BBC","bg-sky-50 text-sky-700 border-sky-400"];
+          if(/skysports\.com/.test(host)) return ["Sky","bg-cyan-50 text-cyan-700 border-cyan-400"];
+          return ["報道","bg-slate-50 text-slate-700 border-slate-300"];
+        }catch{ return ["", "bg-slate-50 text-slate-700 border-slate-300"]; }
+      }
+
       function App(){
         const [tab,setTab]=useState("intel");
 
         // データ
         const [players,setPlayers]=useState([]);
         const [keywords,setKeywords]=useState({injury:[],returning:[],form:[]});
-        const [roster,setRoster]=useState([]);     // ウォッチ選手（英語表記のまま）
+        const [roster,setRoster]=useState([]);   // ウォッチ選手（英語表記）
         const [sources,setSources]=useState([]);
 
         const {trOnce, get:tget}=useTranslator();
@@ -128,8 +139,9 @@
           }catch(e){ alert(e.message); }
         }
 
-        // インサイト：ウォッチ選手でフィルタ
-        const insights = useMemo(()=>{
+        // インサイト：ウォッチ＆タグ絞り込み
+        const [filterKinds,setFilterKinds]=useState({injury:true, returning:true, form:true});
+        const insightsRaw = useMemo(()=>{
           const arr=[];
           for(const s of sources){
             for(const h of (s.highlights||[])){
@@ -140,18 +152,21 @@
           }
           return arr.sort((a,b)=>b.ts-a.ts);
         },[sources,roster]);
+        const insights = useMemo(()=> insightsRaw.filter(i=>filterKinds[i.kind]), [insightsRaw, filterKinds]);
 
-        // 翻訳先読み（上位20件）
+        // 翻訳先読み
         useEffect(()=>{
           const uniq = Array.from(new Set(insights.map(i=>i.sentence))).slice(0,20);
           uniq.forEach(s=>{ if(!tget(s)) trOnce(s); });
         },[insights]);
 
-        const watchPlayers=useMemo(()=> roster.map(n=>({name:n, facts: insights.filter(i=>eqName(i.player,n)).slice(0,3)})), [roster,insights]);
+        const watchPlayers=useMemo(()=> roster.map(n=>({name:n, facts: insightsRaw.filter(i=>eqName(i.player,n)).slice(0,3)})), [roster,insightsRaw]);
 
-        // ===== 試合プリセット =====
+        // ===== 試合プリセット + 定番ソース =====
         const [homeTeam,setHomeTeam]=useState("");
         const [awayTeam,setAwayTeam]=useState("");
+        const [teamSources,setTeamSources]=useState(null);
+        useEffect(()=>{ fetch("/config/team_sources.json").then(r=>r.json()).then(setTeamSources).catch(()=>setTeamSources({})); },[]);
         const teamOptions = useMemo(()=> Array.from(new Set(players.map(p=>p.teamId))).sort(), [players]);
         const teamName = (id)=> TEAM_LABELS[id] || id;
 
@@ -162,12 +177,41 @@
           setRoster(Array.from(new Set(names)));
           quickScan();
         }
+        async function fetchTeamDefaultSources(){
+          const ids=[homeTeam,awayTeam].filter(Boolean);
+          if(!ids.length) return alert("チームを選んでください");
+          const urls = [];
+          for(const id of ids){
+            (teamSources?.[id]||[]).forEach(s=> urls.push(s.url));
+          }
+          const uniq=[...new Set(urls)];
+          for(const u of uniq){ await addSource(u); await new Promise(r=>setTimeout(r,150)); }
+        }
         function clearMatchPreset(){ setHomeTeam(""); setAwayTeam(""); setRoster([]); }
 
-        // ===== Matches（簡易メモ） =====
-        const [matches,setMatches]=useState([]);
-        function newMatch(){ setMatches(m=>[{id:uid(), when:new Date().toISOString(), memo:""}, ...m]); }
+        // ===== エクスポート（Markdown）=====
+        function exportMarkdown(){
+          const lines=[];
+          lines.push(`# 試合メモ`);
+          if(homeTeam||awayTeam) lines.push(`- 対象: ${homeTeam?teamName(homeTeam):""}${awayTeam?` vs ${teamName(awayTeam)}`:""}`);
+          lines.push("");
+          const byPlayer=new Map();
+          for(const i of insights){
+            const arr=byPlayer.get(i.player)||[]; arr.push(i); byPlayer.set(i.player,arr);
+          }
+          for(const [name,arr] of byPlayer){
+            lines.push(`## ${name}`);
+            for(const i of arr){
+              lines.push(`- **${jaKind(i.kind)}**: ${i.sentence} ([出典](${i.url}))`);
+            }
+            lines.push("");
+          }
+          const blob=new Blob([lines.join("\n")],{type:"text/markdown"});
+          const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="footyjoy_insights.md"; a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+        }
 
+        // ===== UI =====
         return (
           <div className="min-h-screen">
             <header className="sticky top-0 z-20 border-b bg-white/90 backdrop-blur">
@@ -180,11 +224,13 @@
                 {tab==="intel" && (
                   <div className="ml-3 flex items-center gap-2 text-sm">
                     <button onClick={quickScan} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">クイックスキャン（EPL）</button>
+                    <button onClick={exportMarkdown} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">Markdown出力</button>
                     <span className="text-slate-500">選手数: {players.length||0}</span>
                   </div>
                 )}
                 {tab==="matches" && (
-                  <button onClick={newMatch} className="ml-3 rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">＋追加</button>
+                  <button onClick={()=>setMatches(m=>[{id:uid(), when:new Date().toISOString(), memo:""}, ...m])}
+                          className="ml-3 rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">＋追加</button>
                 )}
               </div>
             </header>
@@ -198,151 +244,16 @@
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <select className="rounded-xl border px-3 py-1.5" value={homeTeam} onChange={e=>setHomeTeam(e.target.value)}>
                         <option value="">ホームを選択</option>
-                        {teamOptions.map(id => <option key={id} value={id}>{teamName(id)}</option>)}
+                        {Array.from(new Set(players.map(p=>p.teamId))).sort().map(id => <option key={id} value={id}>{TEAM_LABELS[id]||id}</option>)}
                       </select>
                       <select className="rounded-xl border px-3 py-1.5" value={awayTeam} onChange={e=>setAwayTeam(e.target.value)}>
                         <option value="">アウェイを選択</option>
-                        {teamOptions.map(id => <option key={id} value={id}>{teamName(id)}</option>)}
+                        {Array.from(new Set(players.map(p=>p.teamId))).sort().map(id => <option key={id} value={id}>{TEAM_LABELS[id]||id}</option>)}
                       </select>
                       <div className="flex gap-2">
                         <button onClick={startMatchPreset} className="flex-1 rounded-xl border px-3 py-1.5 hover:bg-slate-100">この試合を開始</button>
                         <button onClick={clearMatchPreset} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">解除</button>
                       </div>
                     </div>
-                    {!!roster.length && (
-                      <div className="mt-2 text-xs text-slate-600">
-                        フィルタ中の選手数: <b>{roster.length}</b>{homeTeam||awayTeam ? `（${homeTeam && teamName(homeTeam)}${awayTeam? " vs "+teamName(awayTeam):""}）` : ""}
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                {/* 左：ウォッチ選手 */}
-                <section className="lg:col-span-1">
-                  <div className="rounded-3xl bg-white p-4 shadow-sm">
-                    <h2 className="text-lg font-semibold">ウォッチ選手</h2>
-                    <div className="mt-3 flex gap-2">
-                      <input id="watchName" placeholder="選手名（例：Saka / Haaland）" className="flex-1 rounded-xl border px-3 py-1.5"
-                        onKeyDown={e=>{ if(e.key==='Enter'){ const n=e.currentTarget.value; addWatch(n); e.currentTarget.value=''; }}} />
-                      <button onClick={()=>{ const el=document.getElementById('watchName'); if(el?.value){ addWatch(el.value); el.value=''; } }}
-                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">追加</button>
-                    </div>
-                    <div className="mt-4 space-y-2">
-                      {watchPlayers.map(p=>(
-                        <div key={p.name} className="rounded-2xl border p-2">
-                          <div className="flex items-center justify-between">
-                            <div className="font-medium">{p.name}</div>
-                            <button onClick={()=>removeWatch(p.name)} className="text-xs text-slate-500 hover:text-red-600">削除</button>
-                          </div>
-                          <div className="mt-2 text-xs text-slate-600 space-y-1">
-                            {p.facts.length
-                              ? p.facts.map((f,i)=>(
-                                <div key={i} className="line-clamp-2">
-                                  • {f.sentence} <a href={f.url} target="_blank" className="text-slate-500 underline ml-1">出典</a>
-                                  <div className="text-slate-700">🇯🇵 {tget(f.sentence) || "翻訳中…"}</div>
-                                </div>
-                              ))
-                              : (<div className="text-slate-400">まだありません</div>)
-                            }
-                          </div>
-                        </div>
-                      ))}
-                      {!watchPlayers.length && <div className="p-6 text-center text-slate-500 text-sm">まず選手名を追加し、右の「情報ソース」で記事を取得してください。</div>}
-                    </div>
-                  </div>
-                </section>
-
-                {/* 右：ソース */}
-                <section className="lg:col-span-2">
-                  <div className="rounded-3xl bg-white p-4 shadow-sm">
-                    <h2 className="text-lg font-semibold">情報ソース</h2>
-                    <div className="mt-2 flex gap-2">
-                      <input id="srcUrl" placeholder="URL（BBC / Sky / クラブ公式 など）" className="flex-1 rounded-xl border px-3 py-1.5"
-                        onKeyDown={e=>{ if(e.key==='Enter'){ const u=e.currentTarget.value.trim(); if(u) addSource(u); e.currentTarget.value=''; }}} />
-                      <button onClick={()=>{ const el=document.getElementById('srcUrl'); const u=el?.value?.trim(); if(u){ addSource(u); el.value=''; } }}
-                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">取得</button>
-                    </div>
-                    <div className="mt-2 text-xs text-slate-500">※ X（旧Twitter）などは本文が取得できない場合があります。</div>
-                    <div className="mt-4 grid grid-cols-1 gap-3">
-                      {sources.map(s=>(
-                        <article key={s.id} className="rounded-2xl border p-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <a href={s.url} target="_blank" className="font-medium underline">{s.title}</a>
-                              <div className="text-xs text-slate-500 line-clamp-2">{s.desc}</div>
-                            </div>
-                            <div className="text-xs text-slate-400">{fmtJP(s.fetchedAt)}</div>
-                          </div>
-                          {s.highlights?.length ? (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {s.highlights.map((h,i)=>(
-                                <span key={i} className={cn("rounded-full px-2 py-0.5 text-xs border", chipClass(h.kind))}>
-                                  {h.player}: {jaKind(h.kind)}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (<div className="mt-2 text-xs text-slate-500">自動ハイライトは見つかりませんでした。</div>)}
-                        </article>
-                      ))}
-                      {!sources.length && <div className="p-8 text-center text-slate-500 text-sm">URLを貼って <b>取得</b> を押すと、選手名＋（負傷/復帰/好調）に関する一文を抽出します。</div>}
-                    </div>
-                  </div>
-
-                  {/* インサイト */}
-                  <div className="mt-4 rounded-3xl bg-white p-4 shadow-sm">
-                    <h2 className="text-lg font-semibold">インサイト</h2>
-                    <div className="mt-2 space-y-2">
-                      {insights.map((i,idx)=>(
-                        <div key={idx} className="rounded-xl border p-2 text-sm">
-                          <div className="flex items-center justify-between">
-                            <div><b>{i.player}</b> — <span className={cn("px-1.5 py-0.5 rounded text-xs", chipClass(i.kind))}>{jaKind(i.kind)}</span></div>
-                            <a href={i.url} target="_blank" className="text-xs text-slate-500 underline">出典</a>
-                          </div>
-                          <div className="mt-1">{i.sentence}</div>
-                          <div className="mt-1 text-slate-700">🇯🇵 {tget(i.sentence) || "翻訳中…"}</div>
-                        </div>
-                      ))}
-                      {!insights.length && <div className="p-6 text-center text-slate-500 text-sm">まだインサイトがありません。クイックスキャンや手動取得で集めましょう。</div>}
-                    </div>
-                  </div>
-                </section>
-              </main>
-            ) : (
-              <main className="mx-auto max-w-3xl px-4 py-6">
-                <div className="rounded-3xl bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">観戦メモ</h2>
-                    <button onClick={()=>setMatches(m=>[{id:uid(), when:new Date().toISOString(), memo:""}, ...m])}
-                            className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">＋追加</button>
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {matches.map(m=>(
-                      <div key={m.id} className="rounded-2xl border p-3">
-                        <div className="text-xs text-slate-500">{fmtJP(m.when)}</div>
-                        <textarea rows="2" className="mt-2 w-full rounded-xl border px-2 py-1"
-                          value={m.memo} onChange={e=>{
-                            const v=e.target.value;
-                            setMatches(list=>list.map(x=>x.id===m.id?{...x,memo:v}:x));
-                          }} placeholder="一言メモ…"/>
-                      </div>
-                    ))}
-                    {!matches.length && <div className="p-6 text-center text-slate-500 text-sm">観戦中はここに一行メモだけ残してOK。</div>}
-                  </div>
-                </div>
-              </main>
-            )}
-
-            <footer className="py-8 text-center text-xs text-slate-400">EPL 情報ビュー — 日本語UI</footer>
-          </div>
-        );
-      }
-
-      // ========= ヘルパ =========
-      function eqName(a,b){ return normalize(a)===normalize(b); }
-      function normalize(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,""); }
-      function normalizeUrl(u){ try{ const url=new URL(u); return url.href; } catch{ if(/^https?:\/\//.test(u)) return u; return "https://"+u; } }
-
-      ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-    </script>
-  </body>
-</html>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button onClick={fetchTeamDefaultSources} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">
