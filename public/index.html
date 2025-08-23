@@ -83,6 +83,20 @@
     });
   }catch(e){ alert('Quick Scan失敗: ' + e.message); }
 }
+        
+async function syncInbox(){
+  try{
+    if(!players.length) await loadDictionaries();
+    const r = await fetch('/api/inbox-list?n=40');
+    if(!r.ok) throw new Error('inbox fetch failed');
+    const data = await r.json();
+    setSources(s => {
+      const seen = new Set(s.map(x=>x.url));
+      const add = (data.items||[]).filter(x=>!seen.has(x.url));
+      return [...add, ...s];
+    });
+  }catch(e){ alert('Inbox同期に失敗: ' + e.message); }
+}
 
         async function loadDictionaries(){
           const [kw,pl]=await Promise.all([
@@ -137,6 +151,7 @@
                   <div className="ml-3 flex items-center gap-2 text-sm">
                     <button onClick={loadDictionaries} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">Load EPL base</button>
                     <button onClick={quickScan} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">Quick Scan EPL</button>
+                    <button onClick={syncInbox} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">Inbox 同期</button>
 
                     <span className="text-slate-500">players: {players.length||0}</span>
                   </div>
