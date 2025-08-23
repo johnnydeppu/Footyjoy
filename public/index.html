@@ -17,7 +17,7 @@
       const cn=(...c)=>c.filter(Boolean).join(" ");
       const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 
-      // ========== 抽出ロジック ==========
+      // ========= 抽出ロジック =========
       function splitSentences(text){ if(!text) return []; return String(text).replace(/\s+/g," ").split(/(?<=[\.!?。！？])\s+/).map(s=>s.trim()).filter(Boolean); }
       function normalizeStr(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf\s-]/g,""); }
       function buildPlayerIndex(players){ const idx=new Map(); for(const p of players||[]){ const names=[p.name_en,p.name_local,...(p.alt||[])].filter(Boolean); for(const n of names){ idx.set(normalizeStr(n), p); } } return idx; }
@@ -42,21 +42,20 @@
             }
           }
         }
-        // 重複除去
         const ded=[]; for(const h of out){ if(!ded.some(x=>x.player===h.player&&x.kind===h.kind&&x.sentence===h.sentence)) ded.push(h); }
         return ded.slice(0,50);
       }
 
-      // ========== 日本語表示 ==========
+      // ========= 日本語表示 =========
       function jaKind(k){ return k==="injury"?"負傷":k==="returning"?"復帰":"好調"; }
       function chipClass(k){
-        return k==="injury"?"bg-red-50 border-red-400 text-red-700":
-               k==="returning"?"bg-amber-50 border-amber-400 text-amber-700":
-               "bg-green-50 border-green-400 text-green-700";
+        return k==="injury"    ? "bg-red-50 border-red-400 text-red-700" :
+               k==="returning" ? "bg-amber-50 border-amber-400 text-amber-700" :
+                                 "bg-green-50 border-green-400 text-green-700";
       }
       function fmtJP(ts){ try{ return new Date(ts).toLocaleString("ja-JP",{hour12:false}); }catch{ return ""; } }
 
-      // ========== 翻訳（常時ON・ローカルキャッシュ） ==========
+      // ========= 翻訳（常時ON・ローカルキャッシュ） =========
       const tKey = (s)=> btoa(unescape(encodeURIComponent(String(s)))).slice(0,120);
       function useTranslator(){
         const [cache,setCache]=useState(()=>{ try{ return JSON.parse(localStorage.getItem("fj.tcache")||"{}"); }catch{return{}}; });
@@ -71,8 +70,14 @@
         return {trOnce, get};
       }
 
-      // ========== チーム名（プルダウン表示用） ==========
-      const TEAM_LABELS = { ARS:"Arsenal", MCI:"Man City", LIV:"Liverpool", TOT:"Tottenham", MUN:"Man United", CHE:"Chelsea" };
+      // ========= チーム名（プルダウン表示用） =========
+      const TEAM_LABELS = {
+        ARS:"Arsenal", MCI:"Man City", LIV:"Liverpool", TOT:"Tottenham",
+        MUN:"Man United", CHE:"Chelsea", NEW:"Newcastle", BHA:"Brighton",
+        AVL:"Aston Villa", WHU:"West Ham", BRE:"Brentford", EVE:"Everton",
+        LEI:"Leicester", WOL:"Wolves", SOU:"Southampton", CRY:"Crystal Palace",
+        FUL:"Fulham", NOT:"Nottingham", BOU:"Bournemouth", IPS:"Ipswich"
+      };
 
       function App(){
         const [tab,setTab]=useState("intel");
@@ -332,7 +337,7 @@
         );
       }
 
-      // ========== ヘルパ ==========
+      // ========= ヘルパ =========
       function eqName(a,b){ return normalize(a)===normalize(b); }
       function normalize(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,""); }
       function normalizeUrl(u){ try{ const url=new URL(u); return url.href; } catch{ if(/^https?:\/\//.test(u)) return u; return "https://"+u; } }
