@@ -256,4 +256,155 @@
                       </div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button onClick={fetchTeamDefaultSources} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">
+                      <button onClick={fetchTeamDefaultSources} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">定番ソースを一括取得</button>
+                      {!!roster.length && <span className="text-xs text-slate-600 self-center">フィルタ中の選手数: <b>{roster.length}</b></span>}
+                    </div>
+                  </div>
+                </section>
+
+                {/* 左：ウォッチ選手 */}
+                <section className="lg:col-span-1">
+                  <div className="rounded-3xl bg-white p-4 shadow-sm">
+                    <h2 className="text-lg font-semibold">ウォッチ選手</h2>
+                    <div className="mt-3 flex gap-2">
+                      <input id="watchName" placeholder="選手名（例：Saka / Haaland）" className="flex-1 rounded-xl border px-3 py-1.5"
+                        onKeyDown={e=>{ if(e.key==='Enter'){ const n=e.currentTarget.value; addWatch(n); e.currentTarget.value=''; }}} />
+                      <button onClick={()=>{ const el=document.getElementById('watchName'); if(el?.value){ addWatch(el.value); el.value=''; } }}
+                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">追加</button>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {roster.map(name=>(
+                        <div key={name} className="rounded-2xl border p-2">
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium">{name}</div>
+                            <button onClick={()=>removeWatch(name)} className="text-xs text-slate-500 hover:text-red-600">削除</button>
+                          </div>
+                          <div className="mt-2 text-xs text-slate-600 space-y-1">
+                            {insightsRaw.filter(i=>eqName(i.player,name)).slice(0,3).map((f,i)=>(
+                              <div key={i} className="line-clamp-2">
+                                • {f.sentence} <a href={f.url} target="_blank" className="text-slate-500 underline ml-1">出典</a>
+                                <div className="text-slate-700">🇯🇵 {tget(f.sentence) || "翻訳中…"}</div>
+                              </div>
+                            ))}
+                            {!insightsRaw.some(i=>eqName(i.player,name)) && (<div className="text-slate-400">まだありません</div>)}
+                          </div>
+                        </div>
+                      ))}
+                      {!roster.length && <div className="p-6 text-center text-slate-500 text-sm">まず選手名を追加し、右の「情報ソース」で記事を取得してください。</div>}
+                    </div>
+                  </div>
+                </section>
+
+                {/* 右：ソース & フィルタ */}
+                <section className="lg:col-span-2">
+                  <div className="rounded-3xl bg-white p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold">情報ソース</h2>
+                      <div className="flex gap-1 text-xs">
+                        {["injury","returning","form"].map(k=>(
+                          <button key={k}
+                            onClick={()=>setFilterKinds(f=>({...f,[k]:!f[k]}))}
+                            className={cn("rounded-full border px-2 py-0.5", chipClass(k), !filterKinds[k] && "opacity-40 line-through")}>
+                            {jaKind(k)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex gap-2">
+                      <input id="srcUrl" placeholder="URL（BBC / Sky / クラブ公式 など）" className="flex-1 rounded-xl border px-3 py-1.5"
+                        onKeyDown={e=>{ if(e.key==='Enter'){ const u=e.currentTarget.value.trim(); if(u) addSource(u); e.currentTarget.value=''; }}} />
+                      <button onClick={()=>{ const el=document.getElementById('srcUrl'); const u=el?.value?.trim(); if(u){ addSource(u); el.value=''; } }}
+                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">取得</button>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500">※ X（旧Twitter）などは本文が取得できない場合があります。</div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-3">
+                      {sources.map(s=>{
+                        const [lab,klass]=sourceBadge(s.url);
+                        return (
+                          <article key={s.id} className="rounded-2xl border p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <a href={s.url} target="_blank" className="font-medium underline">{s.title}</a>
+                                <div className="text-xs text-slate-500 line-clamp-2">{s.desc}</div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xs text-slate-400">{fmtJP(s.fetchedAt)}</div>
+                                <span className={cn("mt-1 inline-block rounded-full border px-2 py-0.5 text-xs", klass)}>{lab}</span>
+                              </div>
+                            </div>
+                            {s.highlights?.length ? (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {s.highlights.filter(h=>filterKinds[h.kind]).map((h,i)=>(
+                                  <span key={i} className={cn("rounded-full px-2 py-0.5 text-xs border", chipClass(h.kind))}>
+                                    {h.player}: {jaKind(h.kind)}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (<div className="mt-2 text-xs text-slate-500">自動ハイライトは見つかりませんでした。</div>)}
+                          </article>
+                        );
+                      })}
+                      {!sources.length && <div className="p-8 text-center text-slate-500 text-sm">URLを貼って <b>取得</b> を押すか、上の「定番ソースを一括取得」を使ってください。</div>}
+                    </div>
+                  </div>
+
+                  {/* インサイト */}
+                  <div className="mt-4 rounded-3xl bg-white p-4 shadow-sm">
+                    <h2 className="text-lg font-semibold">インサイト</h2>
+                    <div className="mt-2 space-y-2">
+                      {insights.map((i,idx)=>(
+                        <div key={idx} className="rounded-xl border p-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <div><b>{i.player}</b> — <span className={cn("px-1.5 py-0.5 rounded text-xs", chipClass(i.kind))}>{jaKind(i.kind)}</span></div>
+                            <a href={i.url} target="_blank" className="text-xs text-slate-500 underline">出典</a>
+                          </div>
+                          <div className="mt-1">{i.sentence}</div>
+                          <div className="mt-1 text-slate-700">🇯🇵 {tget(i.sentence) || "翻訳中…"}</div>
+                        </div>
+                      ))}
+                      {!insights.length && <div className="p-6 text-center text-slate-500 text-sm">まだインサイトがありません。クイックスキャンや手動取得で集めましょう。</div>}
+                    </div>
+                  </div>
+                </section>
+              </main>
+            ) : (
+              <main className="mx-auto max-w-3xl px-4 py-6">
+                <div className="rounded-3xl bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">観戦メモ</h2>
+                    <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100"
+                            onClick={()=>setMatches(m=>[{id:uid(), when:new Date().toISOString(), memo:""}, ...m])}>＋追加</button>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {matches.map(m=>(
+                      <div key={m.id} className="rounded-2xl border p-3">
+                        <div className="text-xs text-slate-500">{fmtJP(m.when)}</div>
+                        <textarea rows="2" className="mt-2 w-full rounded-xl border px-2 py-1"
+                          value={m.memo} onChange={e=>{
+                            const v=e.target.value;
+                            setMatches(list=>list.map(x=>x.id===m.id?{...x,memo:v}:x));
+                          }} placeholder="一言メモ…"/>
+                      </div>
+                    ))}
+                    {!matches.length && <div className="p-6 text-center text-slate-500 text-sm">観戦中はここに一行メモだけ残してOK。</div>}
+                  </div>
+                </div>
+              </main>
+            )}
+
+            <footer className="py-8 text-center text-xs text-slate-400">EPL 情報ビュー — 日本語UI</footer>
+          </div>
+        );
+      }
+
+      // ===== ヘルパ =====
+      function eqName(a,b){ return normalize(a)===normalize(b); }
+      function normalize(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,""); }
+      function normalizeUrl(u){ try{ const url=new URL(u); return url.href; } catch{ if(/^https?:\/\//.test(u)) return u; return "https://"+u; } }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+    </script>
+  </body>
+</html>
