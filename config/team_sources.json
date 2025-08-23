@@ -1,0 +1,32 @@
+{
+  "ARS": [
+    {"label": "Arsenal 公式", "url": "https://www.arsenal.com/news"},
+    {"label": "BBC Arsenal", "url": "https://www.bbc.com/sport/football/teams/arsenal"},
+    {"label": "Sky Sports Arsenal", "url": "https://www.skysports.com/arsenal-news"}
+  ],
+  "MCI": [
+    {"label": "Man City 公式", "url": "https://www.mancity.com/news"},
+    {"label": "BBC Man City", "url": "https://www.bbc.com/sport/football/teams/manchester-city"},
+    {"label": "Sky Sports Man City", "url": "https://www.skysports.com/manchester-city-news"}
+  ],
+  "LIV": [
+    {"label": "Liverpool 公式", "url": "https://www.liverpoolfc.com/news"},
+    {"label": "BBC Liverpool", "url": "https://www.bbc.com/sport/football/teams/liverpool"},
+    {"label": "Sky Sports Liverpool", "url": "https://www.skysports.com/liverpool-news"}
+  ],
+  "TOT": [
+    {"label": "Tottenham 公式", "url": "https://www.tottenhamhotspur.com/news/"},
+    {"label": "BBC Tottenham", "url": "https://www.bbc.com/sport/football/teams/tottenham-hotspur"},
+    {"label": "Sky Sports Tottenham", "url": "https://www.skysports.com/tottenham-hotspur-news"}
+  ],
+  "MUN": [
+    {"label": "Man United 公式", "url": "https://www.manutd.com/en/news"},
+    {"label": "BBC Man United", "url": "https://www.bbc.com/sport/football/teams/manchester-united"},
+    {"label": "Sky Sports Man United", "url": "https://www.skysports.com/manchester-united-news"}
+  ],
+  "CHE": [
+    {"label": "Chelsea 公式", "url": "https://www.chelseafc.com/en/news"},
+    {"label": "BBC Chelsea", "url": "https://www.bbc.com/sport/football/teams/chelsea"},
+    {"label": "Sky Sports Chelsea", "url": "https://www.skysports.com/chelsea-news"}
+  ]
+}
