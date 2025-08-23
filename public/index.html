@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="ja">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>FootyJoy — EPL Intel P1 (static)</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>FootyJoy — EPL 情報ビュー（日本語）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -13,90 +13,69 @@
     <div id="root"></div>
 
     <script type="text/babel">
-      const {useState, useEffect, useMemo} = React;
+      const {useState,useEffect,useMemo} = React;
       const cn=(...c)=>c.filter(Boolean).join(" ");
       const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 
-      // ---- 抽出ロジック（/src/lib/extract.js と同じ働き） ----
-      function splitSentences(text){
-        if(!text) return [];
-        return String(text).replace(/\s+/g," ").split(/(?<=[\.!?。！？])\s+/).map(s=>s.trim()).filter(Boolean);
-      }
-      function normalizeStr(s){
-        return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf\s-]/g,"");
-      }
-      function buildPlayerIndex(players){
-        const idx=new Map();
-        for(const p of players||[]){
-          const names=[p.name_en,p.name_local,...(p.alt||[])].filter(Boolean);
-          for(const n of names) idx.set(normalizeStr(n), p);
-        }
-        return idx;
-      }
+      // ===== 抽出ロジック =====
+      function splitSentences(text){ if(!text) return []; return String(text).replace(/\s+/g," ").split(/(?<=[\.!?。！？])\s+/).map(s=>s.trim()).filter(Boolean); }
+      function normalizeStr(s){ return (s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf\s-]/g,""); }
+      function buildPlayerIndex(players){ const idx=new Map(); for(const p of players||[]){ const names=[p.name_en,p.name_local,...(p.alt||[])].filter(Boolean); for(const n of names) idx.set(normalizeStr(n),p);} return idx; }
       function matchHighlights(text, players, keywords){
         const sentences=splitSentences(text).slice(0,400);
         const idx=buildPlayerIndex(players);
-        const K={
-          injury:new Set((keywords?.injury||[]).map(normalizeStr)),
-          returning:new Set((keywords?.returning||[]).map(normalizeStr)),
-          form:new Set((keywords?.form||[]).map(normalizeStr)),
-        };
+        const K={ injury:new Set((keywords?.injury||[]).map(normalizeStr)),
+                  returning:new Set((keywords?.returning||[]).map(normalizeStr)),
+                  form:new Set((keywords?.form||[]).map(normalizeStr)) };
         const out=[];
         for(const raw of sentences){
           const s=normalizeStr(raw);
-          const hasInj=[...K.injury].some(k=>s.includes(k));
-          const hasRet=[...K.returning].some(k=>s.includes(k));
-          const hasForm=[...K.form].some(k=>s.includes(k));
-          if(!hasInj && !hasRet && !hasForm) continue;
-          for(const [key, p] of idx.entries()){
+          const inj=[...K.injury].some(k=>s.includes(k));
+          const ret=[...K.returning].some(k=>s.includes(k));
+          const frm=[...K.form].some(k=>s.includes(k));
+          if(!inj && !ret && !frm) continue;
+          for(const [key,p] of idx.entries()){
             if(key && s.includes(key)){
-              const kind = hasInj ? "injury" : hasRet ? "returning" : "form";
-              out.push({player:p.name_en||key, kind, sentence:raw.trim()});
+              out.push({ player:p.name_en||key, kind:inj?"injury":ret?"returning":"form", sentence:raw.trim() });
             }
           }
         }
-        // dedup
         const ded=[]; for(const h of out){ if(!ded.some(x=>x.player===h.player&&x.kind===h.kind&&x.sentence===h.sentence)) ded.push(h); }
         return ded.slice(0,50);
       }
 
+      // ===== 日本語ヘルパ =====
+      function jaKind(k){ return k==="injury"?"負傷":k==="returning"?"復帰":"好調"; }
+      function fmtJP(ts){ try{ return new Date(ts).toLocaleString("ja-JP",{hour12:false}); }catch{ return ""; } }
+      const trustColor = (k)=> k==="injury"?"bg-red-50 border-red-400 text-red-700"
+                               :k==="returning"?"bg-amber-50 border-amber-400 text-amber-700"
+                               :"bg-green-50 border-green-400 text-green-700";
+
+      // ===== 翻訳（常時ON・キャッシュ付き）=====
+      const tKey = (s)=> btoa(unescape(encodeURIComponent(String(s)))).slice(0,120);
+      function useTranslator(){
+        const [cache,setCache]=useState(()=>{ try{ return JSON.parse(localStorage.getItem("fj.tcache")||"{}"); }catch{return{}}; });
+        useEffect(()=> localStorage.setItem("fj.tcache", JSON.stringify(cache)), [cache]);
+        async function trOnce(s){
+          const k=tKey(s); if(cache[k]) return cache[k];
+          const r=await fetch("/api/translate?q="+encodeURIComponent(s));
+          const data=await r.json(); const text=data?.text||"";
+          setCache(c=>({...c, [k]:text})); return text;
+        }
+        const get=(s)=>cache[tKey(s)];
+        return {trOnce, get};
+      }
+
       function App(){
         const [tab,setTab]=useState("intel");
-        // Intel
+
+        // 状態
         const [players,setPlayers]=useState([]);
         const [keywords,setKeywords]=useState({injury:[],returning:[],form:[]});
         const [roster,setRoster]=useState([]);
         const [sources,setSources]=useState([]);
-        React.useEffect(() => { loadDictionaries(); }, []);
 
-        async function quickScan(){
-  try{
-    if(!players.length) await loadDictionaries(); // 未ロードなら辞書を先に
-    const r = await fetch('/api/scan-epl?limit=32');
-    if(!r.ok) throw new Error('scan failed');
-    const data = await r.json();
-    // URLで重複排除しつつ先頭に追加
-    setSources(s => {
-      const seen = new Set(s.map(x=>x.url));
-      const add = (data.sources||[]).filter(x=>!seen.has(x.url));
-      return [...add, ...s];
-    });
-  }catch(e){ alert('Quick Scan失敗: ' + e.message); }
-}
-        
-async function syncInbox(){
-  try{
-    if(!players.length) await loadDictionaries();
-    const r = await fetch('/api/inbox-list?n=40');
-    if(!r.ok) throw new Error('inbox fetch failed');
-    const data = await r.json();
-    setSources(s => {
-      const seen = new Set(s.map(x=>x.url));
-      const add = (data.items||[]).filter(x=>!seen.has(x.url));
-      return [...add, ...s];
-    });
-  }catch(e){ alert('Inbox同期に失敗: ' + e.message); }
-}
+        const {trOnce, get:tget}=useTranslator();
 
         async function loadDictionaries(){
           const [kw,pl]=await Promise.all([
@@ -105,6 +84,10 @@ async function syncInbox(){
           ]);
           setKeywords(kw); setPlayers(pl);
         }
+
+        // 初期表示時に自動ロード
+        useEffect(()=>{ loadDictionaries(); },[]);
+
         function addWatch(name){ const n=String(name||"").trim(); if(n && !roster.includes(n)) setRoster(r=>[...r,n]); }
         function removeWatch(n){ setRoster(r=>r.filter(x=>x!==n)); }
 
@@ -112,12 +95,25 @@ async function syncInbox(){
           const u = normalizeUrl(url);
           try{
             const r=await fetch(`/api/grab?url=${encodeURIComponent(u)}`);
-            if(!r.ok) throw new Error("fetch failed");
+            if(!r.ok) throw new Error("取得に失敗しました");
             const data=await r.json();
             const text = data.text || `${data.title||""} ${data.desc||""}`;
             const highlights = matchHighlights(text, players, keywords);
-            setSources(s=>[{id:uid(), url:u, title:data.title||u, desc:data.desc||"", fetchedAt:Date.now(), highlights}, ...s]);
+            setSources(s=>[{ id:uid(), url:u, title:data.title||u, desc:data.desc||"", fetchedAt:Date.now(), highlights }, ...s]);
           }catch(e){ alert("取得失敗: "+e.message); }
+        }
+
+        async function quickScan(){
+          try{
+            const r = await fetch("/api/scan-epl?limit=32");
+            if(!r.ok) throw new Error("スキャンに失敗しました");
+            const data = await r.json();
+            setSources(s=>{
+              const seen=new Set(s.map(x=>x.url));
+              const add=(data.sources||[]).filter(x=>!seen.has(x.url));
+              return [...add, ...s];
+            });
+          }catch(e){ alert(e.message); }
         }
 
         const insights = useMemo(()=>{
@@ -132,9 +128,15 @@ async function syncInbox(){
           return arr.sort((a,b)=>b.ts-a.ts);
         },[sources,roster]);
 
-        const watchPlayers = useMemo(()=> roster.map(n=>({name:n, facts: insights.filter(i=>eqName(i.player,n)).slice(0,3)})), [roster,insights]);
+        // 日本語訳の先読み（上位20件）
+        useEffect(()=>{
+          const uniq = Array.from(new Set(insights.map(i=>i.sentence))).slice(0,20);
+          uniq.forEach(s=>{ if(!tget(s)) trOnce(s); });
+        },[insights]);
 
-        // Matches（最小）
+        const watchPlayers=useMemo(()=> roster.map(n=>({name:n, facts: insights.filter(i=>eqName(i.player,n)).slice(0,3)})), [roster,insights]);
+
+        // Matches（簡易メモ）
         const [matches,setMatches]=useState([]);
         function newMatch(){ setMatches(m=>[{id:uid(), when:new Date().toISOString(), memo:""}, ...m]); }
 
@@ -142,65 +144,73 @@ async function syncInbox(){
           <div className="min-h-screen">
             <header className="sticky top-0 z-20 border-b bg-white/90 backdrop-blur">
               <div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-3">
-                <div className="text-xl font-bold">⚽ FootyJoy <span className="text-slate-500 text-sm">EPL P1</span></div>
+                <div className="text-xl font-bold">⚽ FootyJoy <span className="text-slate-500 text-sm">EPL 情報ビュー</span></div>
                 <nav className="ml-2 rounded-full bg-slate-100 p-1 text-sm">
-                  <button onClick={()=>setTab("intel")} className={cn("px-3 py-1 rounded-full", tab==="intel"?"bg-white shadow":"hover:bg-white/60")}>Intel</button>
-                  <button onClick={()=>setTab("matches")} className={cn("px-3 py-1 rounded-full", tab==="matches"?"bg-white shadow":"hover:bg-white/60")}>Matches</button>
+                  <button onClick={()=>setTab("intel")} className={cn("px-3 py-1 rounded-full", tab==="intel"?"bg-white shadow":"hover:bg-white/60")}>情報</button>
+                  <button onClick={()=>setTab("matches")} className={cn("px-3 py-1 rounded-full", tab==="matches"?"bg-white shadow":"hover:bg-white/60")}>観戦メモ</button>
                 </nav>
                 {tab==="intel" && (
                   <div className="ml-3 flex items-center gap-2 text-sm">
-                    <button onClick={loadDictionaries} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">Load EPL base</button>
-                    <button onClick={quickScan} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">Quick Scan EPL</button>
-                    <button onClick={syncInbox} className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">Inbox 同期</button>
-
-                    <span className="text-slate-500">players: {players.length||0}</span>
+                    <button onClick={loadDictionaries} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">辞書を読み込む</button>
+                    <button onClick={quickScan} className="rounded-xl border px-3 py-1.5 hover:bg-slate-100">クイックスキャン（EPL）</button>
+                    <span className="text-slate-500">選手数: {players.length||0}</span>
                   </div>
                 )}
                 {tab==="matches" && (
-                  <button onClick={newMatch} className="ml-3 rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">+ New</button>
+                  <button onClick={newMatch} className="ml-3 rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">＋追加</button>
                 )}
               </div>
             </header>
 
             {tab==="intel" ? (
               <main className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 左：ウォッチ選手 */}
                 <section className="lg:col-span-1">
                   <div className="rounded-3xl bg-white p-4 shadow-sm">
-                    <h2 className="text-lg font-semibold">Watch players</h2>
+                    <h2 className="text-lg font-semibold">ウォッチ選手</h2>
                     <div className="mt-3 flex gap-2">
-                      <input id="watchName" placeholder="Saka / Haaland など" className="flex-1 rounded-xl border px-3 py-1.5"
-                             onKeyDown={e=>{ if(e.key==='Enter'){ const n=e.currentTarget.value; addWatch(n); e.currentTarget.value=''; }}} />
+                      <input id="watchName" placeholder="選手名（例：サカ / ハーランド）" className="flex-1 rounded-xl border px-3 py-1.5"
+                        onKeyDown={e=>{ if(e.key==='Enter'){ const n=e.currentTarget.value; addWatch(n); e.currentTarget.value=''; }}} />
                       <button onClick={()=>{ const el=document.getElementById('watchName'); if(el?.value){ addWatch(el.value); el.value=''; } }}
-                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">Add</button>
+                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">追加</button>
                     </div>
                     <div className="mt-4 space-y-2">
                       {watchPlayers.map(p=>(
                         <div key={p.name} className="rounded-2xl border p-2">
                           <div className="flex items-center justify-between">
                             <div className="font-medium">{p.name}</div>
-                            <button onClick={()=>removeWatch(p.name)} className="text-xs text-slate-500 hover:text-red-600">Remove</button>
+                            <button onClick={()=>removeWatch(p.name)} className="text-xs text-slate-500 hover:text-red-600">削除</button>
                           </div>
                           <div className="mt-2 text-xs text-slate-600 space-y-1">
-                            {p.facts.length? p.facts.map((f,i)=>(<div key={i} className="line-clamp-2">• {f.sentence} <a href={f.url} target="_blank" className="text-slate-500 underline ml-1">src</a></div>))
-                            : (<div className="text-slate-400">No facts yet</div>)}
+                            {p.facts.length
+                              ? p.facts.map((f,i)=>(
+                                  <div key={i} className="line-clamp-2">
+                                    • {f.sentence}
+                                    <a href={f.url} target="_blank" className="text-slate-500 underline ml-1">出典</a>
+                                    <div className="text-slate-700">🇯🇵 {tget(f.sentence) || "翻訳中…"}</div>
+                                  </div>
+                                ))
+                              : (<div className="text-slate-400">まだありません</div>)
+                            }
                           </div>
                         </div>
                       ))}
-                      {!watchPlayers.length && <div className="p-6 text-center text-slate-500 text-sm">まずは選手名を追加し、右のSourcesにURLを貼ってFetchしてください。</div>}
+                      {!watchPlayers.length && <div className="p-6 text-center text-slate-500 text-sm">まず選手名を追加し、右の「情報ソース」で記事を取得してください。</div>}
                     </div>
                   </div>
                 </section>
 
+                {/* 右：ソースとインサイト */}
                 <section className="lg:col-span-2">
                   <div className="rounded-3xl bg-white p-4 shadow-sm">
-                    <h2 className="text-lg font-semibold">Sources</h2>
+                    <h2 className="text-lg font-semibold">情報ソース</h2>
                     <div className="mt-2 flex gap-2">
-                      <input id="srcUrl" placeholder="URL（BBC / Sky / クラブ公式 等）" className="flex-1 rounded-xl border px-3 py-1.5"
-                             onKeyDown={e=>{ if(e.key==='Enter'){ const u=e.currentTarget.value.trim(); if(u) addSource(u); e.currentTarget.value=''; }}} />
+                      <input id="srcUrl" placeholder="URL（BBC / Sky / クラブ公式 など）" className="flex-1 rounded-xl border px-3 py-1.5"
+                        onKeyDown={e=>{ if(e.key==='Enter'){ const u=e.currentTarget.value.trim(); if(u) addSource(u); e.currentTarget.value=''; }}} />
                       <button onClick={()=>{ const el=document.getElementById('srcUrl'); const u=el?.value?.trim(); if(u){ addSource(u); el.value=''; } }}
-                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">Fetch</button>
+                              className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">取得</button>
                     </div>
-                    <div className="mt-2 text-xs text-slate-500">※ Xなど本文取得が難しいサイトは、タイトル/メタだけになることがあります。</div>
+                    <div className="mt-2 text-xs text-slate-500">※ X（旧Twitter）などは本文が取得できない場合があります。</div>
                     <div className="mt-4 grid grid-cols-1 gap-3">
                       {sources.map(s=>(
                         <article key={s.id} className="rounded-2xl border p-3">
@@ -209,41 +219,37 @@ async function syncInbox(){
                               <a href={s.url} target="_blank" className="font-medium underline">{s.title}</a>
                               <div className="text-xs text-slate-500 line-clamp-2">{s.desc}</div>
                             </div>
-                            <div className="text-xs text-slate-400">{new Date(s.fetchedAt).toLocaleString()}</div>
+                            <div className="text-xs text-slate-400">{fmtJP(s.fetchedAt)}</div>
                           </div>
                           {s.highlights?.length ? (
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {s.highlights.map((h,i)=>(
-                                <span key={i} className={cn("rounded-full px-2 py-0.5 text-xs border",
-                                  h.kind==="injury"?"bg-red-50 border-red-400 text-red-700":
-                                  h.kind==="returning"?"bg-amber-50 border-amber-400 text-amber-700":
-                                  "bg-green-50 border-green-400 text-green-700"
-                                )}>{h.player}: {h.kind}</span>
+                                <span key={i} className={cn("rounded-full px-2 py-0.5 text-xs border", trustColor(h.kind))}>
+                                  {h.player}: {jaKind(h.kind)}
+                                </span>
                               ))}
                             </div>
                           ) : (<div className="mt-2 text-xs text-slate-500">自動ハイライトは見つかりませんでした。</div>)}
                         </article>
                       ))}
-                      {!sources.length && <div className="p-8 text-center text-slate-500 text-sm">URLを貼って <b>Fetch</b> を押すと、選手名＋怪我/復帰/好調ワードを含む文を抽出します。</div>}
+                      {!sources.length && <div className="p-8 text-center text-slate-500 text-sm">URLを貼って <b>取得</b> を押すと、選手名＋（負傷/復帰/好調）に関する一文を抽出します。</div>}
                     </div>
                   </div>
 
                   <div className="mt-4 rounded-3xl bg-white p-4 shadow-sm">
-                    <h2 className="text-lg font-semibold">Insights</h2>
+                    <h2 className="text-lg font-semibold">インサイト</h2>
                     <div className="mt-2 space-y-2">
                       {insights.map((i,idx)=>(
                         <div key={idx} className="rounded-xl border p-2 text-sm">
                           <div className="flex items-center justify-between">
-                            <div><b>{i.player}</b> — <span className={cn("px-1.5 py-0.5 rounded text-xs",
-                              i.kind==="injury"?"bg-red-50 text-red-700":
-                              i.kind==="returning"?"bg-amber-50 text-amber-700":"bg-green-50 text-green-700"
-                            )}>{i.kind}</span></div>
-                            <a href={i.url} target="_blank" className="text-xs text-slate-500 underline">source</a>
+                            <div><b>{i.player}</b> — <span className={cn("px-1.5 py-0.5 rounded text-xs", trustColor(i.kind))}>{jaKind(i.kind)}</span></div>
+                            <a href={i.url} target="_blank" className="text-xs text-slate-500 underline">出典</a>
                           </div>
                           <div className="mt-1">{i.sentence}</div>
+                          <div className="mt-1 text-slate-700">🇯🇵 {tget(i.sentence) || "翻訳中…"}</div>
                         </div>
                       ))}
-                      {!insights.length && <div className="p-6 text-center text-slate-500 text-sm">まだインサイトがありません。URLを貼って集約しましょう。</div>}
+                      {!insights.length && <div className="p-6 text-center text-slate-500 text-sm">まだインサイトがありません。クイックスキャンや手動取得で集めましょう。</div>}
                     </div>
                   </div>
                 </section>
@@ -252,19 +258,19 @@ async function syncInbox(){
               <main className="mx-auto max-w-3xl px-4 py-6">
                 <div className="rounded-3xl bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Matches (quick memo)</h2>
+                    <h2 className="text-lg font-semibold">観戦メモ</h2>
                     <button onClick={()=>setMatches(m=>[{id:uid(), when:new Date().toISOString(), memo:""}, ...m])}
-                            className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">+ New</button>
+                            className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-100">＋追加</button>
                   </div>
                   <div className="mt-4 space-y-3">
                     {matches.map(m=>(
                       <div key={m.id} className="rounded-2xl border p-3">
-                        <div className="text-xs text-slate-500">{new Date(m.when).toLocaleString()}</div>
+                        <div className="text-xs text-slate-500">{fmtJP(m.when)}</div>
                         <textarea rows="2" className="mt-2 w-full rounded-xl border px-2 py-1"
-                                  value={m.memo} onChange={e=>{
-                                    const v=e.target.value;
-                                    setMatches(list=>list.map(x=>x.id===m.id?{...x,memo:v}:x));
-                                  }} placeholder="一言メモ…" />
+                          value={m.memo} onChange={e=>{
+                            const v=e.target.value;
+                            setMatches(list=>list.map(x=>x.id===m.id?{...x,memo:v}:x));
+                          }} placeholder="一言メモ…"/>
                       </div>
                     ))}
                     {!matches.length && <div className="p-6 text-center text-slate-500 text-sm">観戦中はここに一行メモだけ残してOK。</div>}
@@ -273,7 +279,7 @@ async function syncInbox(){
               </main>
             )}
 
-            <footer className="py-8 text-center text-xs text-slate-400">EPL Intel P1 (static) — Built with ❤️</footer>
+            <footer className="py-8 text-center text-xs text-slate-400">EPL 情報ビュー — 日本語UI</footer>
           </div>
         );
       }
